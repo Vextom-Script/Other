@@ -1,1 +1,187 @@
+-- 
 
+local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+
+local LIST_URL = "https://raw.githubusercontent.com/Vextom-Script/Vextom/refs/heads/Base/CheckerList"
+local localPlayer = Players.LocalPlayer
+
+local MIN_PATTERN_LENGTH = 4
+local MIN_EMBEDDED_LENGTH = 5
+local FULLSCREEN_DURATION = 5
+
+local function fetch(url)
+	local ok, res = pcall(function()
+		return game:HttpGet(url)
+	end)
+	if ok and type(res) == "string" then return res end
+
+	local req = (syn and syn.request) or http_request or request
+	if req then
+		local ok2, r = pcall(req, { Url = url, Method = "GET" })
+		if ok2 and r and r.Body then return r.Body end
+	end
+
+	local ok3, res3 = pcall(function()
+		return HttpService:GetAsync(url)
+	end)
+	if ok3 then return res3 end
+
+	return nil
+end
+
+local function parseList(raw)
+	local set = {}
+	for line in string.gmatch(raw, "[^\r\n]+") do
+		local name = line:match("^%s*(.-)%s*$")
+		if name ~= "" then
+			set[name:lower()] = true
+		end
+	end
+	return set
+end
+
+local function isSuspiciousName(name)
+	if type(name) ~= "string" then
+		return false
+	end
+	local lowered = name:lower()
+	local pureName = not lowered:find("[^il]")
+
+	for run in lowered:gmatch("[il]+") do
+		local needed = (pureName and MIN_PATTERN_LENGTH) or MIN_EMBEDDED_LENGTH
+		if #run >= needed and run:find("i") and run:find("l") then
+			return true
+		end
+	end
+	return false
+end
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "UserWarning"
+gui.ResetOnSpawn = false
+gui.IgnoreGuiInset = true
+gui.DisplayOrder = 999
+local okParent = pcall(function() gui.Parent = CoreGui end)
+if not okParent then gui.Parent = localPlayer:WaitForChild("PlayerGui") end
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 210, 0, 0)
+frame.AutomaticSize = Enum.AutomaticSize.Y
+frame.Position = UDim2.new(0.5, -630, 0, 150)
+frame.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+frame.BorderSizePixel = 0
+frame.Visible = false
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 8)
+local stroke = Instance.new("UIStroke", frame)
+stroke.Color = Color3.fromRGB(255, 60, 60)
+stroke.Thickness = 2
+local pad = Instance.new("UIPadding", frame)
+pad.PaddingTop, pad.PaddingBottom = UDim.new(0, 10), UDim.new(0, 10)
+pad.PaddingLeft, pad.PaddingRight = UDim.new(0, 12), UDim.new(0, 12)
+
+local label = Instance.new("TextLabel")
+label.BackgroundTransparency = 1
+label.Size = UDim2.new(1, 0, 0, 0)
+label.AutomaticSize = Enum.AutomaticSize.Y
+label.TextWrapped = true
+label.Font = Enum.Font.GothamBold
+label.TextSize = 16
+label.TextColor3 = Color3.fromRGB(255, 255, 255)
+label.TextXAlignment = Enum.TextXAlignment.Left
+label.Parent = frame
+
+local overlay = Instance.new("Frame")
+overlay.Name = "FullscreenWarning"
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.Position = UDim2.new(0, 0, 0, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(40, 0, 0)
+overlay.BorderSizePixel = 0
+overlay.Active = false
+overlay.Visible = false
+overlay.ZIndex = 10
+overlay.Parent = gui
+
+local overlayStroke = Instance.new("UIStroke", overlay)
+overlayStroke.Color = Color3.fromRGB(255, 60, 60)
+overlayStroke.Thickness = 6
+
+local overlayPad = Instance.new("UIPadding", overlay)
+overlayPad.PaddingTop, overlayPad.PaddingBottom = UDim.new(0, 40), UDim.new(0, 40)
+overlayPad.PaddingLeft, overlayPad.PaddingRight = UDim.new(0, 40), UDim.new(0, 40)
+
+local overlayLabel = Instance.new("TextLabel")
+overlayLabel.BackgroundTransparency = 1
+overlayLabel.Size = UDim2.new(1, 0, 1, 0)
+overlayLabel.TextWrapped = true
+overlayLabel.TextScaled = true
+overlayLabel.Font = Enum.Font.GothamBold
+overlayLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+overlayLabel.TextXAlignment = Enum.TextXAlignment.Center
+overlayLabel.TextYAlignment = Enum.TextYAlignment.Center
+overlayLabel.ZIndex = 11
+overlayLabel.Parent = overlay
+
+local overlayMaxText = Instance.new("UITextSizeConstraint", overlayLabel)
+overlayMaxText.MaxTextSize = 72
+
+local fullscreenShown = false
+
+local function showFullscreen(text)
+	if fullscreenShown then return end
+	fullscreenShown = true
+	overlayLabel.Text = text
+	overlay.Visible = true
+	task.delay(FULLSCREEN_DURATION, function()
+		overlay.Visible = false
+	end)
+end
+
+local listed = {}
+local raw = fetch(LIST_URL)
+if raw then
+	listed = parseList(raw)
+else
+	print("[UserWarning] Could not fetch the list (pattern check still active).")
+end
+
+local function refresh(leavingPlayer)
+	local found = {}
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= localPlayer and plr ~= leavingPlayer then
+			local flagged = listed[plr.Name:lower()]
+				or listed[plr.DisplayName:lower()]
+				or isSuspiciousName(plr.Name)
+				or isSuspiciousName(plr.DisplayName)
+			if flagged then
+				table.insert(found, plr.Name)
+			end
+		end
+	end
+
+	if #found > 0 then
+		local text = "Exploiters:\n" .. table.concat(found, "\n")
+		label.Text = text
+		frame.Visible = true
+		return text
+	else
+		label.Text = ""
+		frame.Visible = false
+		return nil
+	end
+end
+
+Players.PlayerAdded:Connect(function()
+	task.defer(refresh)
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+	refresh(plr) 
+end)
+
+local initialText = refresh()
+if initialText then
+	showFullscreen(initialText)
+end
