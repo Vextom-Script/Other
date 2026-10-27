@@ -1,3 +1,5 @@
+-- loadstring(game:HttpGet(""))()
+
 --[[
     Cobalt
     A runtime developer tool to monitor and intercept network traffic
