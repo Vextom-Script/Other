@@ -4,7 +4,7 @@ local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 
-local LIST_URL = "https://raw.githubusercontent.com/Vextom-Script/Vextom/refs/heads/Base/CheckerList"
+local LIST_URL = "https://raw.githubusercontent.com/Vextom-Script/Other/refs/heads/X/AntiCheatList"
 local localPlayer = Players.LocalPlayer
 
 local MIN_PATTERN_LENGTH = 4
