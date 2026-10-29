@@ -168,8 +168,8 @@ local function refresh(leavingPlayer)
 		return text
 	else
 		label.Text = ""
-		frame.Visible = false
-		return nil
+		frame.Visible = true
+		return text
 	end
 end
 
