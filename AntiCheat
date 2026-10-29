@@ -1,5 +1,7 @@
 -- loadstring(game:HttpGet("https://raw.githubusercontent.com/Vextom-Script/Other/refs/heads/X/AntiCheat"))()
 
+print("loading anticheat")
+
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
