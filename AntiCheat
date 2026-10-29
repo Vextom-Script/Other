@@ -182,7 +182,6 @@ Players.PlayerRemoving:Connect(function(plr)
 end)
 
 local initialText = refresh()
-print("loaded")
 if initialText then
 	showFullscreen(initialText)
 end
